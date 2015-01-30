@@ -1,0 +1,488 @@
+#coding:utf-8
+
+import struct
+from struct import pack,unpack,calcsize
+import time
+
+
+def load_dex(filename):
+    with open(filename, 'rb') as f:
+		return f.read()
+
+
+def dex2byte(file):
+    '''返回字节数组'''
+    buff=[]
+    for i in xrange(len(file)):
+        buff.append(struct.pack("s",file[i])[0])
+    return buff
+
+    buff=struct.pack("s",file)
+
+class Cursor(object):
+    def __init__(self,  buff):
+        self.data=buff
+        self.index=0
+    def read(self,i):
+        value=self.data[self.index:self.index+i]
+        self.index=self.index+i
+        return value
+
+    def getRemain(self):
+        return len(self.data)-self.index
+
+
+class readMapList(object):
+    def __init__(self,buff):
+        self.data=buff[4:]
+        self.size=unpack("I","".join(buff[0:4]))[0]
+        self.dic={}
+        for i in xrange(0,self.size):
+            temp=self.data[i*12:i*12+12]
+            key=unpack("H","".join(temp[:2]))[0]
+            value=unpack("I","".join(temp[8:]))[0]
+            self.dic[key]=value
+
+    def get_TYPE_HEADER_ITEM(self):
+        key=int("0x0000",16)
+        return self.dic[key]
+
+    def get_TYPE_STRING_ID_ITEM(self):
+        key=int("0x0001",16)
+        return self.dic[key]
+
+    def get_TYPE_TYPE_ID_ITEM(self):
+        key=int("0x0002",16)
+        return self.dic[key]
+    def get_TYPE_PROTO_ID_ITEM(self):
+        key=int("0x0003",16)
+        return self.dic[key]
+    def get_TYPE_FIELD_ID_ITEM(self):
+        key=int("0x0004",16)
+        return self.dic[key]
+
+    def get_TYPE_METHOD_ID_ITEM(self):
+        key=int("0x0005",16)
+        return self.dic[key]
+
+    def get_TYPE_CLASS_DEF_ITEM(self):
+        key=int("0x0006",16)
+        return self.dic[key]
+
+    def get_TYPE_MAP_LIST(self):
+        key=int("0x1000",16)
+        return self.dic[key]
+
+    def get_TYPE_ANNOTATION_SET_REF_LIST(self):
+        key=int("0x1002",16)
+        return self.dic[key]
+
+    def get_TYPE_ANNOTATION_SET_ITEM(self):
+        key=int("0x1003",16)
+        return self.dic[key]
+
+    def get_TYPE_CLASS_DATA_ITEM(self):
+        key=int("0x2000",16)
+        return self.dic[key]
+
+    def get_TYPE_CODE_ITEM(self):
+        key=int("0x2001",16)
+        return self.dic[key]
+
+    def get_TYPE_STRING_DATA_ITEM(self):
+        key=int("0x2002",16)
+        return self.dic[key]
+
+    def get_TYPE_DEBUG_INFO_ITEM(self):
+        key=int("0x2003",16)
+        return self.dic[key]
+
+    def get_TYPE_ANNOTATION_ITEM(self):
+        key=int("0x2004",16)
+        return self.dic[key]
+
+    def get_TYPE_ENCODED_ARRAY_ITEM(self):
+        key=int("0x2005",16)
+        return self.dic[key]
+    def get_TYPE_ANNOTATIONS_DIRECTORY_ITEM(self):
+        key=int("0x2006",16)
+        return self.dic[key]
+
+
+
+def readHeader(Cur_buff):
+    Cur_Data=Cur_buff
+    HEAD=Cur_Data.read(112)
+    Cur_HEAD=Cursor(HEAD)
+    magic=Cur_HEAD.read(8)
+    checksum=Cur_HEAD.read(4)
+    signature=Cur_HEAD.read(20)
+    file_size=Cur_HEAD.read(4)
+    header_size=Cur_HEAD.read(4)
+    endian_tag=Cur_HEAD.read(4)
+    link_size=Cur_HEAD.read(4)
+    link_off=Cur_HEAD.read(4)
+    map_off=Cur_HEAD.read(4)
+    string_ids_size=Cur_HEAD.read(4)
+    string_ids_off=Cur_HEAD.read(4)
+    type_ids_size=Cur_HEAD.read(4)
+    type_ids_off=Cur_HEAD.read(4)
+    proto_ids_size=Cur_HEAD.read(4)
+    proto_ids_off=Cur_HEAD.read(4)
+    field_ids_size=Cur_HEAD.read(4)
+    field_ids_off=Cur_HEAD.read(4)
+    method_ids_size=Cur_HEAD.read(4)
+    method_ids_off=Cur_HEAD.read(4)
+    class_defs_size=Cur_HEAD.read(4)
+    class_defs_off=Cur_HEAD.read(4)
+    data_size=Cur_HEAD.read(4)
+    data_off=Cur_HEAD.read(4)
+    map_offset=unpack("I","".join(map_off))[0]
+    MAP=readMapList(DATA[map_offset:])
+
+    '''读取String区'''
+    string_size=unpack("I","".join(string_ids_size))[0]
+    string_offset=unpack("I","".join(string_ids_off))[0]
+    string_end=string_offset+string_size*4
+    #print string_size,string_offset
+    global STRING_DATA,STRING_DATA_SIZE
+    STRING_DATA_SIZE=string_size
+    STRING_DATA=DATA[string_offset:string_end]
+    #print string_offset,MAP.get_TYPE_STRING_ID_ITEM()
+
+
+    '''读取Type区'''
+    type_size=unpack("I","".join(type_ids_size))[0]
+    type_offset=unpack("I","".join(type_ids_off))[0]
+    type_end=type_offset+type_size*4
+    #print string_size,string_offset
+    global TYPE_DATA,TYPE_DATA_SIZE
+    TYPE_DATA_SIZE=type_size
+    TYPE_DATA=DATA[type_offset:type_end]
+    #print type_offset,MAP.get_TYPE_TYPE_ID_ITEM(),TYPE_DATA_SIZE
+
+
+    '''读取proto区'''
+    proto_size=unpack("I","".join(proto_ids_size))[0]
+    proto_offset=unpack("I","".join(proto_ids_off))[0]
+    proto_end=proto_offset+proto_size*12
+    #print string_size,string_offset
+    global PROTO_DATA,PROTO_DATA_SIZE
+    PROTO_DATA_SIZE=proto_size
+    PROTO_DATA=DATA[proto_offset:proto_end]
+    #print proto_offset,MAP.get_TYPE_PROTO_ID_ITEM(),PROTO_DATA_SIZE
+
+
+    '''读取method区'''
+    method_size=unpack("I","".join(method_ids_size))[0]
+    method_offset=unpack("I","".join(method_ids_off))[0]
+    method_end=method_offset+method_size*8
+    global METHOD_DATA,METHOD_DATA_SIZE
+    METHOD_DATA_SIZE=method_size
+    METHOD_DATA=DATA[method_offset:method_end]
+    #print method_offset,MAP.get_TYPE_STRING_DATA_ITEM()
+
+
+    '''读取class区'''
+    class_size=unpack("I","".join(class_defs_size))[0]
+    class_offset=unpack("I","".join(class_defs_off))[0]
+    class_end=class_offset+class_size*32
+    global CLASS_DATA,CLASS_DATA_SIZE
+    CLASS_DATA_SIZE=class_size
+    CLASS_DATA=DATA[class_offset:class_end]
+
+    return HEAD
+
+
+
+def ULEB128(buff):
+    result = 0
+    shift = 0
+    for i in range(5):
+        byte = ord(buff.read(1)[0])
+        result |= ((byte & 0x7F) << shift)
+        if (byte & 0x80) == 0:
+            break
+        shift += 7
+    return result
+
+
+
+def readString(string_data,string_size):
+    buff=string_data
+    list=[]
+    for i in xrange(0,string_size):
+        list.append(unpack("I","".join(buff[i*4:i*4+4]))[0])
+    dic={}
+    for i in xrange(0,string_size):
+        temp=Cursor(DATA[list[i]:])
+        number=ULEB128(temp)
+        string_data=temp.read(number)
+        dic[i]="".join(string_data)
+        temp.read(1)
+    return  dic
+
+def readType(type_data,size):
+    buff=type_data
+    typelist=[]
+    for i in xrange(0,size):
+        temp=buff[4*i:4*i+4]
+        index=unpack("I","".join(temp))[0]
+        typelist.append(STRING_DIC[index])
+    return typelist
+
+
+def readProto(proto_data,size):
+    buff=proto_data
+    proto_list=[]
+    for i in xrange(0,size):
+        temp=buff[12*i:12*i+12]
+        #print "".join(temp[0:4])
+        index=unpack("I","".join(temp[0:4]))[0]
+        return_index=unpack("I","".join(temp[4:8]))[0]
+        parameters_off=unpack("I","".join(temp[8:12]))[0]
+        proto_list.append((STRING_DIC[index],TYPE_LIST[return_index],parameters_off))
+    #print proto_list
+    return proto_list
+
+
+def readMethod(method_data,size):
+    buff=method_data
+    #print size
+    method_list=[]
+    #print buff[0:8],buff[8:16]
+    for i in xrange(0,size):
+        temp=buff[i*8:i*8+8]
+        class_index=unpack("H","".join(temp[0:2]))[0]
+        proto_index=unpack("H","".join(temp[2:4]))[0]
+        name_index=unpack("I","".join(temp[4:8]))[0]
+        method_list.append((TYPE_LIST[class_index],PROTO_LIST[proto_index],STRING_DIC[name_index]))
+        #method_list.append((class_index,proto_index,name_index))
+    return method_list
+
+def readClass(class_data,size):
+    buff=class_data
+    class_dic={}
+    for i in xrange(0,size):
+        temp=buff[i*32:i*32+32]
+        classname_index=unpack("I","".join(temp[0:4]))[0]
+        class_data_off=unpack("I","".join(temp[24:28]))[0]
+        class_dic[TYPE_LIST[classname_index]]=class_data_off
+
+    return class_dic
+
+def readMethodfromClass(class_data):
+    buff=class_data
+    direct=[]
+    vitual=[]
+    static_field_size=ULEB128(buff)
+    instance_field_size=ULEB128(buff)
+    directive_method_size=ULEB128(buff)
+    vitual_method_size=ULEB128(buff)
+    #print static_field_size,instance_field_size,directive_method_size,vitual_method_size
+    for i in range(static_field_size):
+        ULEB128(buff)
+        ULEB128(buff)
+
+    for i in range(instance_field_size):
+        ULEB128(buff)
+        ULEB128(buff)
+
+    for i in range(directive_method_size):
+        directive_method_id=ULEB128(buff)
+        ULEB128(buff)
+        directive_code_off=ULEB128(buff)
+        direct.append((METHOD_LIST[directive_method_id],directive_code_off))
+
+    for i in range(vitual_method_size):
+        method_id=ULEB128(buff)
+        ULEB128(buff)
+        code_off=ULEB128(buff)
+        #print len(METHOD_LIST),method_id
+        vitual.append((METHOD_LIST[method_id],code_off))
+
+    global DIRECT_METHOD,VITUAL_METHOD
+    DIRECT_METHOD=direct
+    VITUAL_METHOD=vitual
+
+def setNOP(code_off,method_name):
+    buff=DATA[code_off:]
+    insns_size=unpack("I","".join(buff[12:16]))[0]
+    insns_off=code_off+16
+    for i in xrange(0,insns_size):
+        DATA[insns_off+2*i]="\x00"
+        DATA[insns_off+2*i+1]="\x00"
+    filename=method_name.strip("<>")+"_rm.dex"
+    f=open(filename,"wb")
+    for item in DATA:
+        f.write(item)
+    f.close()
+
+
+def findMethod(name,work_list):
+    result_list=[]
+    for item in work_list:
+        if name.strip("\r\n")==item[0][2]:
+            result_list.append(item)
+
+    return result_list
+
+def Log(log):
+    print log
+    f=open("error.log","a+")
+    error_time=time.strftime('%Y-%m-%d:%H:%M:%S',time.localtime(time.time()))
+    f.write(error_time+"--"+log+"\n")
+    f.write("--------------------------------------------------\n")
+    f.close()
+
+
+
+HEAD_DATA=[]
+STRING_DATA=[]
+STRING_DATA_SIZE=0
+STRING_DIC={}
+
+TYPE_DATA=[]
+TYPE_DATA_SIZE=0
+TYPE_LIST=[]
+
+PROTO_DATA=[]
+PROTO_DATA_SIZE=0
+PROTO_LIST=[]
+
+METHOD_DATA=[]
+METHOD_DATA_SIZE=0
+METHOD_LIST=[]
+
+CLASS_DATA=[]
+CLASS_DATA_SIZE=0
+CLASS_DIC={}
+
+DIRECT_METHOD=[]
+VITUAL_METHOD=[]
+
+if __name__ == '__main__':
+    #open file
+    try:
+        DATA=dex2byte(load_dex("classes.dex"))
+    except:
+        Log("Open dex file error!")
+        exit(1)
+
+    #PreProcess-----------------------------------------------------------------------PreProcess
+    print "Analyzing the Dex file ........."
+    start = time.clock()
+    Cur_buff=Cursor(DATA)
+    try:
+        HEAD_DATA=readHeader(Cur_buff)
+    except:
+        Log("Get dex header data error!")
+        exit(1)
+
+    try:
+        STRING_DIC=readString(STRING_DATA,STRING_DATA_SIZE)
+    except:
+        Log("Get String data error!")
+        exit(1)
+
+    try:
+        TYPE_LIST=readType(TYPE_DATA,TYPE_DATA_SIZE)
+    except:
+        Log("Get Type data error!")
+        exit(1)
+
+    try:
+        PROTO_LIST=readProto(PROTO_DATA,PROTO_DATA_SIZE)
+    except:
+        Log("Get Proto data error!")
+        exit(1)
+
+    try:
+        METHOD_LIST=readMethod(METHOD_DATA,METHOD_DATA_SIZE)
+    except:
+        Log("Get Method data error!")
+        exit(1)
+    try:
+        CLASS_DIC=readClass(CLASS_DATA,CLASS_DATA_SIZE)
+    except:
+        Log("Get Class data error!")
+        exit(1)
+    #PreProcess-----------------------------------------------------------------------PreProcess
+    #Search
+    end=time.clock()
+    print "Analyse Finished!   Time use:"+str(int(end-start))
+    while True:
+        classname=raw_input("Please Input a Class Name: (Note that 'L' and ';' is needed)")
+        if classname in CLASS_DIC.keys():
+            print "Have Found the Class ..."
+            offset=CLASS_DIC[classname]
+            class_data_item=DATA[offset:]
+            buff=Cursor(class_data_item)
+            readMethodfromClass(buff)
+        else:
+            print "ERROR:--Can't Find Class Name"
+            continue
+
+        work_method_list=DIRECT_METHOD
+        while True:
+            method_type=raw_input("Please Choose the Method Type: (Press 1 for 'Direct', 2 for 'Vitual') ")
+            if method_type=='1':
+                work_method_list=DIRECT_METHOD
+                break
+            elif method_type=='2':
+                work_method_list=VITUAL_METHOD
+                break
+            else:
+                print "ERROR:--Wrong Choice!"
+
+
+        while True:
+            method_name=raw_input("Please Input the Method Name: ")
+            find_result_list=findMethod(method_name,work_method_list)
+            if len(find_result_list)==0:
+                print "ERROR:--can't find that method"
+                continue
+            else:
+                print "Have Found the Method, Set to NOP Now...."
+                result_num=1
+                if len(find_result_list)>1:
+                    for i in range(len(find_result_list)):
+                        item=find_result_list[i]
+                        print str(i+1)+": "+item[0][0]+"   ->   "+item[0][2]
+                    index=int(raw_input("Not only one rusult, type the num to choose:"))
+                    result_num=index
+
+                setNOP(find_result_list[result_num-1][1],method_name)
+                s=raw_input("Set to ROP finished!!! (Type any key for continue or type 'q' for quit)")
+                if s=='q':
+                    exit(0)
+            break
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
